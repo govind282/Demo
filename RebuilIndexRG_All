@@ -1,0 +1,37 @@
+Create PROCEDURE [dbo].[RebuilIndexRG_All]
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+--Please don't write anything below this block
+--Kumudini 15.02.2012 To Update 0 Value in LastUpdate Extended Property & Rebuild All Indexes
+Declare @TableName NVarchar(100)
+Declare TablesList Cursor For 
+
+SELECT  Distinct t.name  FROM    sys.dm_db_index_physical_stats (DB_ID(), NULL, NULL, NULL, NULL) frag
+JOIN    sys.tables t
+ON      frag.object_id = t.object_id
+JOIN    sys.indexes i
+ON      frag.index_id = i.index_id
+AND     frag.object_id = i.object_id
+WHERE   
+--frag.page_count > 100 AND     
+--frag.avg_fragmentation_in_percent > 50 AND     
+i.type != 0
+AND     t.name != 'ThreadActionCount'
+
+Open TablesList
+Fetch Next From TablesList Into @TableName
+While @@FETCH_STATUS=0
+Begin
+	
+	Exec ('Alter Index All On '+@TableName+' Rebuild')
+		
+	Fetch Next From TablesList Into @TableName
+End
+Close TablesList
+Deallocate TablesList
+--Please don't write anything below this line
+
+END
